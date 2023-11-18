@@ -5,148 +5,183 @@ import 'Vehicle.dart';
 
 void main() {
   //runApp(MyVehicleApp());
-  runApp(MyToDoApp());
+  runApp(MyApp());
 }
 
 class ApiConstants {
   static const String backendBaseUrl = 'https://parseapi.back4app.com';
-  static const String yourClassName = 'VehicleManagement';
+  static const String yourClassName = 'TaskList';
   static const String yourAppId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
   static const String yourRestApiKey = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
 }
+class Task {
+  final String? objectId;
+  final String title;
+  final String description;
 
-class MyToDoApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Vehicle Table'),
-        ),
-        body: MyTable(),
-      ),
+  Task({
+    this.objectId,
+    required this.title,
+    required this.description,
+  });
+
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      objectId: json['objectId'],
+      title: json['Title'],
+      description: json['Description'],
     );
   }
-}
 
-class ApiHelper {
-  static Uri getApiUrl(String path) {
-    return Uri.parse('${ApiConstants.backendBaseUrl}/classes/$path');
-  }
-
-  static Map<String, String> getApiHeaders() {
+  Map<String, dynamic> toJson() {
     return {
-      'X-Parse-Application-Id': ApiConstants.yourAppId,
-      'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
-      'Content-Type': 'application/json',
+      'Title': title,
+      'Description': description,
     };
   }
 }
 
-class MyTable extends StatefulWidget {
-  @override
-  _MyTableState createState() => _MyTableState();
+class TaskService {
+  Future<List<Task>> fetchTasks() async {
+    final response = await http.get(
+      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+      headers: {
+        'X-Parse-Application-Id': ApiConstants.yourAppId,
+        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> tasksJson = json.decode(response.body)['results'];
+      return tasksJson.map((e) => Task.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to fetch tasks');
+    }
+  }
+
+  Future<void> addTask(Task task) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+      headers: {
+        'X-Parse-Application-Id': ApiConstants.yourAppId,
+        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(task.toJson()),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to add task');
+    }
+  }
+
+  Future<void> updateTask(Task task) async {
+    final response = await http.put(
+      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+      headers: {
+        'X-Parse-Application-Id': ApiConstants.yourAppId,
+        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(task.toJson()),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update task');
+    }
+  }
+
+  Future<void> deleteTask(Task task) async {
+    final response = await http.delete(
+      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+      headers: {
+        'X-Parse-Application-Id': ApiConstants.yourAppId,
+        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete task');
+    }
+  }
 }
 
-class _MyTableState extends State<MyTable> {
-  TextEditingController ownerNameController = TextEditingController();
-  TextEditingController regNumberController = TextEditingController();
-  TextEditingController makeController = TextEditingController();
-  TextEditingController modelController = TextEditingController();
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Task Manager',
+      home: TaskListScreen(),
+    );
+  }
+}
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+class TaskListScreen extends StatefulWidget {
+  @override
+  _TaskListScreenState createState() => _TaskListScreenState();
+}
 
-  List<Map<String, dynamic>> data = [];
+class _TaskListScreenState extends State<TaskListScreen> {
+  final TaskService taskService = TaskService();
+  late Future<List<Task>> _tasksFuture;
 
   @override
   void initState() {
     super.initState();
-    fetchData();
+    _refreshTaskList();
   }
 
-  Future<void> fetchData() async {
-    final response = await http.get(
-      ApiHelper.getApiUrl(ApiConstants.yourClassName),
-      headers: ApiHelper.getApiHeaders(),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> responseData = jsonDecode(response.body)['results'];
-      setState(() {
-        data = List.from(responseData);
-      });
-    } else {
-      print('Failed to load data: ${response.statusCode}');
-    }
+  Future<void> _refreshTaskList() async {
+    setState(() {
+      _tasksFuture = taskService.fetchTasks();
+    });
   }
 
-  void showAddDataForm(BuildContext context) {
-    showDialog(
+  Future<void> _showAddTaskDialog(BuildContext context) async {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+
+    return showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: Text('Add Data'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: ownerNameController,
-                    decoration: InputDecoration(labelText: 'Owner Name'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter owner name';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: regNumberController,
-                    decoration: InputDecoration(labelText: 'Registration Number'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter registration number';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: makeController,
-                    decoration: InputDecoration(labelText: 'Make'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter make';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: modelController,
-                    decoration: InputDecoration(labelText: 'Model'),
-                    validator: (value) {
-                      return null;
-                    },
-                  ),
-                ],
+          title: Text('Add Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
               ),
-            ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+            ],
           ),
-          actions: [
+          actions: <Widget>[
             TextButton(
+              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.validate() ?? false) {
-                  addData();
+              child: Text('Add'),
+              onPressed: () async {
+                final newTask = Task(
+                  title: titleController.text,
+                  description: descriptionController.text,
+                );
+                try {
+                  await taskService.addTask(newTask);
+                  print('Task added successfully');
                   Navigator.of(context).pop();
+                  _refreshTaskList(); // Refresh task list after adding task
+                } catch (e) {
+                  print('Error adding task: $e');
                 }
               },
-              child: Text('Add'),
             ),
           ],
         );
@@ -154,131 +189,52 @@ class _MyTableState extends State<MyTable> {
     );
   }
 
-  void addData() async {
-    final Map<String, dynamic> newData = {
-      'OwnerName': ownerNameController.text,
-      'RegistrationNumber': regNumberController.text,
-      'Make': makeController.text,
-      'Model': modelController.text,
-    };
-
-    final response = await http.post(
-      ApiHelper.getApiUrl(ApiConstants.yourClassName),
-      headers: ApiHelper.getApiHeaders(),
-      body: jsonEncode(newData),
-    );
-
-    if (response.statusCode == 201) {
-      // Data added successfully
-      print('Data added successfully');
-      // Fetch updated data
-      fetchData();
-    } else {
-      // Failed to add data
-      print('Failed to add data: ${response.statusCode}');
-    }
-
-    // Clear controllers
-    ownerNameController.clear();
-    regNumberController.clear();
-    makeController.clear();
-    modelController.clear();
-  }
-
-  void deleteData(String objectId) async {
-    final response = await http.delete(
-      ApiHelper.getApiUrl('${ApiConstants.yourClassName}/$objectId'),
-      headers: ApiHelper.getApiHeaders(),
-    );
-
-    if (response.statusCode == 200) {
-      // Data deleted successfully
-      print('Data deleted successfully');
-      // Fetch updated data
-      fetchData();
-    } else {
-      // Failed to delete data
-      print('Failed to delete data: ${response.statusCode}');
-    }
-  }
-
-  void editData(String objectId) async {
-    ownerNameController ??= TextEditingController();
-    regNumberController ??= TextEditingController();
-    makeController ??= TextEditingController();
-    modelController ??= TextEditingController();
-
-    ownerNameController.text = data.firstWhere((item) => item['objectId'] == objectId)['OwnerName'] ?? '';
-    regNumberController.text = data.firstWhere((item) => item['objectId'] == objectId)['RegistrationNumber'] ?? '';
-    makeController.text = data.firstWhere((item) => item['objectId'] == objectId)['Make'] ?? '';
-    modelController.text = data.firstWhere((item) => item['objectId'] == objectId)['Model'] ?? '';
+  Future<void> _showEditTaskDialog(BuildContext context, Task task) async {
+    TextEditingController titleController = TextEditingController(text: task.title);
+    TextEditingController descriptionController = TextEditingController(text: task.description);
 
     await showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: Text('Edit Data'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: ownerNameController,
-                    decoration: InputDecoration(labelText: 'Owner Name'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter owner name';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: regNumberController,
-                    decoration: InputDecoration(labelText: 'Registration Number'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter registration number';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: makeController,
-                    decoration: InputDecoration(labelText: 'Make'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter make';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: modelController,
-                    decoration: InputDecoration(labelText: 'Model'),
-                    validator: (value) {
-                      return null;
-                    },
-                  ),
-                ],
+          title: Text('Edit Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Title'),
               ),
-            ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+            ],
           ),
-          actions: [
+          actions: <Widget>[
             TextButton(
+              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.validate() ?? false) {
-                  updateData(objectId);
+              child: Text('Save'),
+              onPressed: () async {
+                final updatedTask = Task(
+                  objectId: task.objectId,
+                  title: titleController.text,
+                  description: descriptionController.text,
+                );
+                try {
+                  await taskService.updateTask(updatedTask);
+                  print('Task updated successfully');
                   Navigator.of(context).pop();
+                  _refreshTaskList(); // Refresh task list after updating task
+                } catch (e) {
+                  print('Error updating task: $e');
                 }
               },
-              child: Text('Update'),
             ),
           ],
         );
@@ -286,82 +242,89 @@ class _MyTableState extends State<MyTable> {
     );
   }
 
-  void updateData(String objectId) async {
-    final Map<String, dynamic> updatedData = {
-      'OwnerName': ownerNameController.text,
-      'RegistrationNumber': regNumberController.text,
-      'Make': makeController.text,
-      'Model': modelController.text,
-    };
-
-    final response = await http.put(
-      ApiHelper.getApiUrl('${ApiConstants.yourClassName}/$objectId'),
-      headers: ApiHelper.getApiHeaders(),
-      body: jsonEncode(updatedData),
+  Future<void> _confirmDeleteTask(BuildContext context, Task task) async {
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Confirm Deletion'),
+          content: Text('Are you sure you want to delete this task?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            ElevatedButton(
+              child: Text('Delete'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
     );
 
-    if (response.statusCode == 200) {
-      // Data updated successfully
-      print('Data updated successfully');
-      // Fetch updated data
-      fetchData();
-    } else {
-      // Failed to update data
-      print('Failed to update data: ${response.statusCode}');
+    if (confirmDelete ?? false) {
+      try {
+        await taskService.deleteTask(task);
+        print('Task deleted successfully');
+        _refreshTaskList(); // Refresh task list after deleting task
+      } catch (e) {
+        print('Error deleting task: $e');
+      }
     }
-
-    // Clear controllers
-    ownerNameController.clear();
-    regNumberController.clear();
-    makeController.clear();
-    modelController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: DataTable(
-          columns: [
-            DataColumn(label: Text('Owner Name')),
-            DataColumn(label: Text('Registration Number')),
-            DataColumn(label: Text('Make')),
-            DataColumn(label: Text('Model')),
-            DataColumn(label: Text('Action')),
-          ],
-          rows: data.map((rowData) {
-            return DataRow(
-              cells: [
-                DataCell(Text(rowData['OwnerName'].toString())),
-                DataCell(Text(rowData['RegistrationNumber'].toString())),
-                DataCell(Text(rowData['Make'].toString())),
-                DataCell(Text(rowData['Model']?.toString() ?? '')),
-                DataCell(
-                  Row(
+      appBar: AppBar(
+        title: Text('Task Manager'),
+      ),
+      body: FutureBuilder<List<Task>>(
+        future: _tasksFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final tasks = snapshot.data ?? [];
+            return ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(tasks[index].title),
+                  subtitle: Text(tasks[index].description),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: Icon(Icons.edit),
                         onPressed: () {
-                          editData(rowData['objectId']);
+                          _showEditTaskDialog(context, tasks[index]);
                         },
                       ),
                       IconButton(
                         icon: Icon(Icons.delete),
                         onPressed: () {
-                          deleteData(rowData['objectId']);
+                          _confirmDeleteTask(context, tasks[index]);
                         },
                       ),
                     ],
                   ),
-                ),
-              ],
+                );
+              },
             );
-          }).toList(),
-        ),
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showAddDataForm(context);
+        onPressed: () async {
+          await _showAddTaskDialog(context);
         },
         child: Icon(Icons.add),
       ),
