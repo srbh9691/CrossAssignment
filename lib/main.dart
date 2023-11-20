@@ -12,17 +12,21 @@ class ApiConstants {
   static const String backendBaseUrl = 'https://parseapi.back4app.com';
   static const String yourClassName = 'TaskList';
   static const String yourAppId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
-  static const String yourRestApiKey = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
+  static const String yourRestApiKey =
+      'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
 }
+
 class Task {
   final String? objectId;
   final String title;
   final String description;
+  bool? done;
 
   Task({
     this.objectId,
     required this.title,
     required this.description,
+    this.done,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,7 @@ class Task {
       objectId: json['objectId'],
       title: json['Title'],
       description: json['Description'],
+      done: json['Done'] ?? false,
     );
   }
 
@@ -37,6 +42,7 @@ class Task {
     return {
       'Title': title,
       'Description': description,
+      'Done': done ?? false,
     };
   }
 }
@@ -44,7 +50,8 @@ class Task {
 class TaskService {
   Future<List<Task>> fetchTasks() async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+      Uri.parse(
+          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
       headers: {
         'X-Parse-Application-Id': ApiConstants.yourAppId,
         'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
@@ -61,7 +68,8 @@ class TaskService {
 
   Future<void> addTask(Task task) async {
     final response = await http.post(
-      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+      Uri.parse(
+          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
       headers: {
         'X-Parse-Application-Id': ApiConstants.yourAppId,
         'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
@@ -77,7 +85,8 @@ class TaskService {
 
   Future<void> updateTask(Task task) async {
     final response = await http.put(
-      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+      Uri.parse(
+          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
       headers: {
         'X-Parse-Application-Id': ApiConstants.yourAppId,
         'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
@@ -93,7 +102,8 @@ class TaskService {
 
   Future<void> deleteTask(Task task) async {
     final response = await http.delete(
-      Uri.parse('${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+      Uri.parse(
+          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
       headers: {
         'X-Parse-Application-Id': ApiConstants.yourAppId,
         'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
@@ -102,6 +112,25 @@ class TaskService {
 
     if (response.statusCode != 200) {
       throw Exception('Failed to delete task');
+    }
+  }
+
+  Future<void> updateDoneStatus(Task task) async {
+    final response = await http.put(
+      Uri.parse(
+          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+      headers: {
+        'X-Parse-Application-Id': ApiConstants.yourAppId,
+        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'Done': task.done ?? false, // Ensure 'done' has a default value
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update done status');
     }
   }
 }
@@ -190,8 +219,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _showEditTaskDialog(BuildContext context, Task task) async {
-    TextEditingController titleController = TextEditingController(text: task.title);
-    TextEditingController descriptionController = TextEditingController(text: task.description);
+    TextEditingController titleController =
+        TextEditingController(text: task.title);
+    TextEditingController descriptionController =
+        TextEditingController(text: task.description);
 
     await showDialog(
       context: context,
@@ -242,7 +273,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  Future<void> _confirmDeleteTask(BuildContext context, Task task) async {
+  Future<void> _confirmDeleteTask(Task task) async {
     bool confirmDelete = await showDialog(
       context: context,
       builder: (context) {
@@ -278,6 +309,31 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
+  void _viewTaskDetails(BuildContext context, Task task) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TaskDetailScreen(task: task),
+      ),
+    );
+  }
+
+  void _updateDoneStatus(Task task) async {
+    if (task.done != null) {
+      //task.done = !task.done!; // Toggle the 'done' status if it's not null
+      taskService.updateDoneStatus(task).then((_) {
+        print('Done status updated successfully');
+        setState(() {
+          // Update the state to reflect the changes in the UI
+        });
+      }).catchError((error) {
+        print('Error updating done status: $error');
+        // Handle error if the update fails
+        // You can consider rolling back the local change if needed
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,31 +347,54 @@ class _TaskListScreenState extends State<TaskListScreen> {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No tasks available'));
           } else {
-            final tasks = snapshot.data ?? [];
             return ListView.builder(
-              itemCount: tasks.length,
+              itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
+                Task task = snapshot.data![index];
                 return ListTile(
-                  title: Text(tasks[index].title),
-                  subtitle: Text(tasks[index].description),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  title: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.edit),
-                        onPressed: () {
-                          _showEditTaskDialog(context, tasks[index]);
-                        },
+                      Text(
+                        task.title,
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () {
-                          _confirmDeleteTask(context, tasks[index]);
-                        },
+                      Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Checkbox(
+                            value: task.done ?? false,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                task.done = value ?? false;
+                                print('Done ' + value.toString());
+                              });
+                              _updateDoneStatus(task);
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: () {
+                              _showEditTaskDialog(context, task);
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete),
+                            onPressed: () {
+                              _confirmDeleteTask(task);
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  subtitle: Text(task.description),
+                  onTap: () {
+                    _viewTaskDetails(context, task);
+                  },
                 );
               },
             );
@@ -323,10 +402,47 @@ class _TaskListScreenState extends State<TaskListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await _showAddTaskDialog(context);
+        onPressed: () {
+          _showAddTaskDialog(context);
         },
         child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class TaskDetailScreen extends StatelessWidget {
+  final Task task;
+
+  TaskDetailScreen({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Task Details'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Title: ${task.title}',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Description: ${task.description}',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Done: ${task.done ?? false ? 'Yes' : 'No'}',
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
