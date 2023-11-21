@@ -23,7 +23,7 @@ This Flutter application is a simple task manager that allows users to create, u
 ### 2. Clone the Repository:
 ```bash
 git clone https://github.com/srbh9691/CrossAssignment.git
-cd CrossAssignment.
+cd CrossAssignment
 ```
  
 ### 3. Install Dependencies:
