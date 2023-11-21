@@ -369,7 +369,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Complete All'),
+                Text('Mark all as complete'),
                 Checkbox(
                   value: _allTasksDone,
                   onChanged: (value) {
@@ -417,13 +417,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             },
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit),
+                            icon: Icon(Icons.edit, color: Colors.blue,),
                             onPressed: () {
                               _showEditTaskDialog(context, task);
                             },
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete),
+                            icon: Icon(Icons.delete, color: Colors.redAccent,),
                             onPressed: () {
                               _confirmDeleteTask(task);
                             },
@@ -433,6 +433,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     ],
                   ),
                   subtitle: Text(task.description),
+                  leading: CircleAvatar(
+                    backgroundColor: task.done == true
+                        ? Colors.green
+                        : Colors.blue,
+                    foregroundColor: Colors.white,
+                    child: Icon(task.done == true
+                        ? Icons.check
+                        : Icons.error),
+                  ),
                   onTap: () {
                     _viewTaskDetails(context, task);
                   },
@@ -482,7 +491,7 @@ class TaskDetailScreen extends StatelessWidget {
             ),
             SizedBox(height: 10),
             Text(
-              'Done: ${task.done ?? false ? 'Yes' : 'No'}',
+              'Status: ${task.done ?? false ? 'Done' : 'Pending'}',
               style: TextStyle(fontSize: 18),
             ),
           ],
