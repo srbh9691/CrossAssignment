@@ -153,6 +153,7 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> {
   final TaskService taskService = TaskService();
   late Future<List<Task>> _tasksFuture;
+  bool _allTasksDone = false;
 
   @override
   void initState() {
@@ -334,11 +335,51 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
+  Future<void> _markAllTasks(bool value) async {
+    try {
+      List<Task> tasks = await _tasksFuture; // Fetch tasks
+
+      tasks.forEach((task) {
+        task.done = value; // Toggle 'Done' status for all tasks locally
+      });
+
+      await Future.wait(tasks.map((task) async {
+        await taskService.updateDoneStatus(task); // Update tasks in batch
+      }));
+
+      setState(() {
+        _allTasksDone = value;
+      });
+
+      print('All tasks marked as ${value ? 'Done' : 'Not Done'} successfully');
+    } catch (error) {
+      print('Error marking all tasks: $error');
+      // Handle error if marking tasks fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Task Manager'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 96.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Complete All'),
+                Checkbox(
+                  value: _allTasksDone,
+                  onChanged: (value) {
+                    _markAllTasks(value ?? false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<List<Task>>(
         future: _tasksFuture,
@@ -394,6 +435,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   subtitle: Text(task.description),
                   onTap: () {
                     _viewTaskDetails(context, task);
+                  },
+                  onLongPress: () {
+                    _showEditTaskDialog(context, task);
                   },
                 );
               },
