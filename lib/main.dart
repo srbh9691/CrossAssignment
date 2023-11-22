@@ -9,10 +9,10 @@ void main() {
 }
 
 class ApiConstants {
-  static const String backendBaseUrl = 'https://parseapi.back4app.com';
-  static const String yourClassName = 'TaskList';
-  static const String yourAppId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
-  static const String yourRestApiKey =
+  static const String backendUrl = 'https://parseapi.back4app.com';
+  static const String className = 'TaskList';
+  static const String appId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
+  static const String restApiKey =
       'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
 }
 
@@ -51,10 +51,10 @@ class TaskService {
   Future<List<Task>> fetchTasks() async {
     final response = await http.get(
       Uri.parse(
-          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+          '${ApiConstants.backendUrl}/classes/${ApiConstants.className}'),
       headers: {
-        'X-Parse-Application-Id': ApiConstants.yourAppId,
-        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'X-Parse-Application-Id': ApiConstants.appId,
+        'X-Parse-REST-API-Key': ApiConstants.restApiKey,
       },
     );
 
@@ -69,10 +69,10 @@ class TaskService {
   Future<void> addTask(Task task) async {
     final response = await http.post(
       Uri.parse(
-          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}'),
+          '${ApiConstants.backendUrl}/classes/${ApiConstants.className}'),
       headers: {
-        'X-Parse-Application-Id': ApiConstants.yourAppId,
-        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'X-Parse-Application-Id': ApiConstants.appId,
+        'X-Parse-REST-API-Key': ApiConstants.restApiKey,
         'Content-Type': 'application/json',
       },
       body: jsonEncode(task.toJson()),
@@ -86,10 +86,10 @@ class TaskService {
   Future<void> updateTask(Task task) async {
     final response = await http.put(
       Uri.parse(
-          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+          '${ApiConstants.backendUrl}/classes/${ApiConstants.className}/${task.objectId}'),
       headers: {
-        'X-Parse-Application-Id': ApiConstants.yourAppId,
-        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'X-Parse-Application-Id': ApiConstants.appId,
+        'X-Parse-REST-API-Key': ApiConstants.restApiKey,
         'Content-Type': 'application/json',
       },
       body: jsonEncode(task.toJson()),
@@ -103,10 +103,10 @@ class TaskService {
   Future<void> deleteTask(Task task) async {
     final response = await http.delete(
       Uri.parse(
-          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+          '${ApiConstants.backendUrl}/classes/${ApiConstants.className}/${task.objectId}'),
       headers: {
-        'X-Parse-Application-Id': ApiConstants.yourAppId,
-        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'X-Parse-Application-Id': ApiConstants.appId,
+        'X-Parse-REST-API-Key': ApiConstants.restApiKey,
       },
     );
 
@@ -118,10 +118,10 @@ class TaskService {
   Future<void> updateDoneStatus(Task task) async {
     final response = await http.put(
       Uri.parse(
-          '${ApiConstants.backendBaseUrl}/classes/${ApiConstants.yourClassName}/${task.objectId}'),
+          '${ApiConstants.backendUrl}/classes/${ApiConstants.className}/${task.objectId}'),
       headers: {
-        'X-Parse-Application-Id': ApiConstants.yourAppId,
-        'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+        'X-Parse-Application-Id': ApiConstants.appId,
+        'X-Parse-REST-API-Key': ApiConstants.restApiKey,
         'Content-Type': 'application/json',
       },
       body: jsonEncode({

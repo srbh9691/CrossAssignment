@@ -33,7 +33,7 @@ flutter pub get
  
 ### 4. Configuration:
 - Open `lib/main.dart`.
-- Update the ApiConstants class with your Back4App details (backendBaseUrl, yourClassName, yourAppId, yourRestApiKey).
+- Update the ApiConstants class with your Back4App details (className, appId, restApiKey).
  
 ### 5. Run the Application:
 - Launch your device or emulator.

@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-//void main() {
-//  runApp(MyApp());
-//}
-
 class ApiConstants {
-  static const String backendBaseUrl = 'https://parseapi.back4app.com';
-  static const String yourClassName = 'VehicleManagement';
-  static const String yourAppId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
-  static const String yourRestApiKey = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
+  static const String backendUrl = 'https://parseapi.back4app.com';
+  static const String className = 'VehicleManagement';
+  static const String appId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
+  static const String restApiKey = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
 }
 
 class MyVehicleApp extends StatelessWidget {
@@ -29,13 +25,13 @@ class MyVehicleApp extends StatelessWidget {
 
 class ApiHelper {
   static Uri getApiUrl(String path) {
-    return Uri.parse('${ApiConstants.backendBaseUrl}/classes/$path');
+    return Uri.parse('${ApiConstants.backendUrl}/classes/$path');
   }
 
   static Map<String, String> getApiHeaders() {
     return {
-      'X-Parse-Application-Id': ApiConstants.yourAppId,
-      'X-Parse-REST-API-Key': ApiConstants.yourRestApiKey,
+      'X-Parse-Application-Id': ApiConstants.appId,
+      'X-Parse-REST-API-Key': ApiConstants.restApiKey,
       'Content-Type': 'application/json',
     };
   }
@@ -64,7 +60,7 @@ class _MyTableState extends State<MyTable> {
 
   Future<void> fetchData() async {
     final response = await http.get(
-      ApiHelper.getApiUrl(ApiConstants.yourClassName),
+      ApiHelper.getApiUrl(ApiConstants.className),
       headers: ApiHelper.getApiHeaders(),
     );
 
@@ -161,7 +157,7 @@ class _MyTableState extends State<MyTable> {
     };
 
     final response = await http.post(
-      ApiHelper.getApiUrl(ApiConstants.yourClassName),
+      ApiHelper.getApiUrl(ApiConstants.className),
       headers: ApiHelper.getApiHeaders(),
       body: jsonEncode(newData),
     );
@@ -185,7 +181,7 @@ class _MyTableState extends State<MyTable> {
 
   void deleteData(String objectId) async {
     final response = await http.delete(
-      ApiHelper.getApiUrl('${ApiConstants.yourClassName}/$objectId'),
+      ApiHelper.getApiUrl('${ApiConstants.className}/$objectId'),
       headers: ApiHelper.getApiHeaders(),
     );
 
@@ -293,7 +289,7 @@ class _MyTableState extends State<MyTable> {
     };
 
     final response = await http.put(
-      ApiHelper.getApiUrl('${ApiConstants.yourClassName}/$objectId'),
+      ApiHelper.getApiUrl('${ApiConstants.className}/$objectId'),
       headers: ApiHelper.getApiHeaders(),
       body: jsonEncode(updatedData),
     );
@@ -327,6 +323,7 @@ class _MyTableState extends State<MyTable> {
             DataColumn(label: Text('Model')),
             DataColumn(label: Text('Action')),
           ],
+
           rows: data.map((rowData) {
             return DataRow(
               cells: [
@@ -357,6 +354,7 @@ class _MyTableState extends State<MyTable> {
           }).toList(),
         ),
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showAddDataForm(context);
