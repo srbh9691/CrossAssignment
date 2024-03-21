@@ -6,7 +6,8 @@ class ApiConstants {
   static const String backendUrl = 'https://parseapi.back4app.com';
   static const String className = 'VehicleManagement';
   static const String appId = 'vvfzJQuFMiVYT55mH2dExPQYYlJvHY6aDxZqtHqx';
-  static const String restApiKey = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
+  // Fix error by updating variable name
+  static const String rApiValue = 'FKDhIui2GpWXVyTSRUsPpVE4QIGXod8uFxKYeLCM';
 }
 
 class MyVehicleApp extends StatelessWidget {
